@@ -1,0 +1,129 @@
+<!-- PinBlock -->
+<div class="whiteOnDarkBlue">Meaning of the Pins</div>
+<img style="height: 24px;" src="./pinned-unpinned-200.png">unpinned
+<img style="height: 24px;" src="./pinned-recursive-200.png">recursive
+<img style="height: 24px;" src="./pinned-direct-200.png">direct<br>
+<img style="height: 24px;" src="./pinned-indirect-200.png">indirect
+<img style="height: 24px;" src="./pinned-indirect-through-200.png">indirect through 
+
+</div> <!--<div id="leftSideBlock">  -->
+
+<script>
+ function createPinButtonOfHash (hash) {
+     let [callee, caller] = functionNameJS();
+     console.log('Entering in',callee,'called by',caller);
+     console.log(callee+'.input.hash:',hash);
+
+     let but = '<button type="submit" class="pinButton" onclick="togglePinStatus(this.value, this.name)" name="'+hash+'">';
+
+     but += '<img src="./questionmark.png" class="' + hash + '" style="height: 24px;">';
+     but += '</button>';
+     console.log(callee+'.but:', but);
+
+     updatePinButtonOfHash(hash);
+     return but;
+ }
+
+ function togglePinStatus(status, hash) {
+     let [callee, caller] = functionNameJS();
+     console.log('Entering in',callee,'called by',caller);
+     console.log(callee+'.input.status:',status);
+     console.log(callee+'.input.hash:',hash);
+     
+     if (status == 'unpinned' || status == 'indirect-through') {
+	 return ipfsPinAdd(hash)
+	     .then( _ => { updatePinButtonOfHash(hash) })
+	 console.log(callee+'.status:',status); // Improve
+     } else if (status == 'direct' || status == 'recursive' || status == 'indirect-through')  {
+	 return ipfsPinRm(hash)
+	     .then( _ => { updatePinButtonOfHash(hash) })
+     } else {
+	 console.log(callee+'.status:',status); // Improve
+     }
+ }
+ 
+ function updatePinButtonOfHash(hash) {
+     let [callee, caller] = functionNameJS();
+     console.log('Entering in',callee,'called by',caller);
+     // Update button defined in createPinButtonOfHash (hash)
+     // with name=hash. Toggling by clicking.
+     console.log(callee+'.input.hash:',hash);
+
+     return getPinStatus(hash)
+	 .then( status => {
+	     console.log(callee+'.status 1:',status);
+	     //status : 'pinned-indirect through Qma84TiiJye6mp4iJZ8ZtZBWqNEqJ3JyAfMXFXy94jgE2A'
+	     if (status.indexOf('through') >= 0) {
+		 let string = status.split(' ');
+		 console.log(callee+'.string:',string);
+		 var thrHash = string[2];
+		 console.log(callee+'.through.hash:', thrHash);
+		 var status = string[0]+'-'+string[1];
+	     }
+	     console.log(callee+'.status 2:',status);
+	     img = document.getElementsByClassName(hash)[0];
+	     if ( thrHash ) {
+		 img.title = 'indirect through ' + thrHash;
+	     } else {
+		 img.title = status;
+	     }
+	     img.src ="./pinned-"+status+"-200.png";
+	     button = document.getElementsByName(hash)[0];
+	     button.value = status;
+	     console.log(callee+'.img:',img);
+	     console.log(callee+'.button:',button);
+	 })
+	 .catch(logError)
+ }
+ 
+ function getPinStatus(hash) {
+     let [callee, caller] = functionNameJS();
+     console.log('Entering in',callee,'called by',caller);
+     console.log(callee+'.input.hash:',hash);
+     
+     const api_url = 'http://127.0.0.1:5001/api/v0/'
+     let  url = api_url + 'pin/ls?arg=/ipfs/'+hash+'&type=all'
+     return fetchRespNoCatch(url)
+	 .then( obj => {
+	     let status;
+	     if (typeof(obj.Code) == 'undefined') {
+		 status = obj.Keys[hash].Type
+	     } else {
+		 status = 'unpinned'
+	     }
+	     console.log(callee+': '+hash+" \u21A6",status);
+	     return status
+	 })
+	 .catch( obj => { logError('getPinStatus.catch',obj) })
+ }
+
+ function ipfsPinAdd(hash) {
+     let [callee, caller] = functionNameJS();
+     console.log('Entering in',callee,'called by',caller);
+     console.log(callee+'.input.hash:',hash);
+
+     const api_url = 'http://127.0.0.1:5001/api/v0/'
+     var url = api_url + 'pin/add?arg=/ipfs/'+hash+'&progress=true'
+     console.log(callee+'.url',url)
+     return fetchGetText(url)
+	 .then(text => { console.log(callee+'.text',text); })
+	 .catch(err => logErrorOfHash (err, hash))
+ }
+
+ function ipfsPinRm(hash) {
+     let [callee, caller] = functionNameJS();
+     console.log('Entering in',callee,'called by',caller);
+     console.log(callee+'.input.hash:',hash);
+     
+     const api_url = 'http://127.0.0.1:5001/api/v0/'
+     var url = api_url + 'pin/rm?arg=/ipfs/'+hash
+     console.log(callee+'.url',url)
+     return fetchGetJson(url)
+	 .then( json => { console.log(callee+'.json',json);
+	     return json.Pins  // Improve when not pinned or indirect
+	 })
+	 .catch(err => logErrorOfHash (err, hash))
+ } 
+ 
+</script>
+<!-- End of PinBlock -->
